@@ -32,5 +32,5 @@ IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
     <bool name="config_regional_date_format">false</bool>
 
     <!-- Whether to show_kernel version name -->
-    <bool name="def_hide_kernel_version_name">false</bool>
+    <bool name="def_hide_kernel_version_name">true</bool>
 </resources>
