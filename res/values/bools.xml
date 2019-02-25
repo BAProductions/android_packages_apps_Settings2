@@ -57,7 +57,7 @@
     <bool name="set_wifi_priority">false</bool>
 
     <!-- Whether to connect to wifi automatically -->
-    <bool name="config_auto_connect_wifi_enabled">false</bool>
+    <bool name="config_auto_connect_wifi_enabled">true</bool>
 
     <!-- Whether to switch cell to wifi -->
     <bool name="cell_to_wifi">false</bool>
