@@ -2,7 +2,7 @@
 <!--
      Copyright (C) 2012-2016 The CyanogenMod Project
                (C) 2017 The LineageOS Project
-
+               (C) 2017 The LightingFastRom Project
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
      You may obtain a copy of the License at
@@ -42,8 +42,8 @@
     <string name="root_appops_title">Manage root accesses</string>
     <string name="root_appops_summary">View and control the root rules</string>
 
-    <!-- About phone screen, LineageOS version -->
-    <string name="mod_version">LineageOS version</string>
+    <!-- About phone screen, LightingFastRom version -->
+    <string name="mod_version">LightingFastRom version</string>
     <string name="mod_version_default">Unknown</string>
 
     <!-- About phone screen, Device model -->
@@ -51,8 +51,8 @@
     <!-- About phone screen, Device name -->
     <string name="device_name">Device name</string>
 
-    <!-- About phone screen, LineageOS Api Level -->
-    <string name="mod_api_level">LineageOS API level</string>
+    <!-- About phone screen, LightingFastRom Api Level -->
+    <string name="mod_api_level">LightingFastRom API level</string>
     <string name="mod_api_level_default">Unknown</string>
 
     <!-- About phone screen, build date -->
@@ -60,7 +60,7 @@
     <string name="build_date_default" translatable="false">2017-01-01-0000</string>
 
     <!-- CM Updater -->
-    <string name="cmupdate_settings_title">LineageOS updates</string>
+    <string name="cmupdate_settings_title">LightingFastRom updates</string>
 
     <!-- Names of categories of app ops tabs - extension of AOSP -->
     <string name="app_ops_categories_location">Location</string>
