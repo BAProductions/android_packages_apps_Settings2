@@ -27,8 +27,14 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.util.NtpTrustedTime;
 import android.os.Bundle;
 import android.os.UserManager;
+import android.location.SettingInjectorService;
 import android.provider.SearchIndexableResource;
 import android.provider.Settings;
 import android.provider.Settings.SettingNotFoundException;
@@ -38,6 +44,7 @@ import android.support.v7.preference.Preference.OnPreferenceChangeListener;
 import android.text.format.DateFormat;
 import android.widget.DatePicker;
 import android.widget.TimePicker;
+import android.util.Log;
 import com.android.internal.logging.MetricsProto.MetricsEvent;
 import com.android.settings.dashboard.SummaryLoader;
 import com.android.settings.search.BaseSearchIndexProvider;
@@ -50,13 +57,20 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
+import java.util.TimeZone;
 
 import static com.android.settingslib.RestrictedLockUtils.EnforcedAdmin;
 
 public class DateTimeSettings extends SettingsPreferenceFragment
-        implements OnTimeSetListener, OnDateSetListener, OnPreferenceChangeListener, Indexable {
-
-    private static final String HOURS_12 = "12";
+        implements OnTimeSetListener, OnDateSetListener, OnPreferenceChangeListener, Indexable, LocationListener {
+	
+	protected LocationManager mLocationManager;
+    protected LocationListener mLocationListener;
+    
+	protected String latitude,longitude; 
+    protected boolean gps_enabled,network_enabled;
+	
+	private static final String HOURS_12 = "12";
     private static final String HOURS_24 = "24";
 
     // Used for showing the current date format, which looks like "12/31/2010", "2010/12/13", etc.
@@ -64,7 +78,6 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     private Calendar mDummyDate;
 
     private static final String KEY_AUTO_TIME = "auto_time";
-    private static final String KEY_AUTO_TIME_ZONE = "auto_zone";
 
     private static final int DIALOG_DATEPICKER = 0;
     private static final int DIALOG_TIMEPICKER = 1;
@@ -78,10 +91,11 @@ public class DateTimeSettings extends SettingsPreferenceFragment
     private RestrictedSwitchPreference mAutoTimePref;
     private Preference mTimePref;
     private Preference mTime24Pref;
-    private SwitchPreference mAutoTimeZonePref;
     private Preference mTimeZone;
     private Preference mDatePref;
-
+	
+	private TimeZone mSelectedTimeZone;
+	
     @Override
     protected int getMetricsCategory() {
         return MetricsEvent.DATE_TIME;
@@ -92,15 +106,24 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         super.onCreate(icicle);
 
         addPreferencesFromResource(R.xml.date_time_prefs);
-
+		
+		//getLocation();
         initUI();
+    }
+
+	protected void getLocation() {
+        Log.v("time", "GetLocation");
+        int LOCATION_REFRESH_TIME = 1000;
+        int LOCATION_REFRESH_DISTANCE = 5;
+        Log.v("WEAVER_", "Has permission");
+        mLocationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, LOCATION_REFRESH_TIME, LOCATION_REFRESH_DISTANCE, mLocationListener);
     }
 
     private void initUI() {
         boolean autoTimeEnabled = getAutoState(Settings.Global.AUTO_TIME);
-        boolean autoTimeZoneEnabled = getAutoState(Settings.Global.AUTO_TIME_ZONE);
-
-        mAutoTimePref = (RestrictedSwitchPreference) findPreference(KEY_AUTO_TIME);
+        
+		mAutoTimePref = (RestrictedSwitchPreference) findPreference(KEY_AUTO_TIME);
         mAutoTimePref.setOnPreferenceChangeListener(this);
         EnforcedAdmin admin = RestrictedLockUtils.checkIfAutoTimeRequired(getActivity());
         mAutoTimePref.setDisabledByAdmin(admin);
@@ -113,29 +136,42 @@ public class DateTimeSettings extends SettingsPreferenceFragment
         // If device admin requires auto time device policy manager will set
         // Settings.Global.AUTO_TIME to true. Note that this app listens to that change.
         mAutoTimePref.setChecked(autoTimeEnabled);
-        mAutoTimeZonePref = (SwitchPreference) findPreference(KEY_AUTO_TIME_ZONE);
-        mAutoTimeZonePref.setOnPreferenceChangeListener(this);
-        // Override auto-timezone if it's a wifi-only device or if we're still in setup wizard.
-        // TODO: Remove the wifiOnly test when auto-timezone is implemented based on wifi-location.
-        if (Utils.isWifiOnly(getActivity()) || isFirstRun) {
-            getPreferenceScreen().removePreference(mAutoTimeZonePref);
-            autoTimeZoneEnabled = false;
-        }
-        mAutoTimeZonePref.setChecked(autoTimeZoneEnabled);
-
+      
         mTimePref = findPreference("time");
         mTime24Pref = findPreference("24 hour");
         mTimeZone = findPreference("timezone");
         mDatePref = findPreference("date");
         if (isFirstRun) {
             getPreferenceScreen().removePreference(mTime24Pref);
+			getPreferenceScreen().removePreference(mTimeZone);
         }
 
         mTimePref.setEnabled(!autoTimeEnabled);
         mDatePref.setEnabled(!autoTimeEnabled);
-        mTimeZone.setEnabled(!autoTimeZoneEnabled);
+        mTimeZone.setEnabled(!autoTimeEnabled);
+    }
+	
+	@Override
+    public void onLocationChanged(Location location) {
+		//"+location.getLatitude() +"Longitude:"+location.getLongitude()
+        Log.d("Latitude:","change");
     }
 
+    @Override
+    public void onProviderDisabled(String provider) {
+        Log.d("Latitude","disable");
+    }
+
+    @Override
+    public void onProviderEnabled(String provider) {
+        Log.d("Latitude","enable");
+    }
+
+    @Override
+    public void onStatusChanged(String provider, int status, Bundle extras) {
+        Log.d("Latitude","status");
+    }
+	
     @Override
     public void onResume() {
         super.onResume();
@@ -205,13 +241,19 @@ public class DateTimeSettings extends SettingsPreferenceFragment
             boolean autoEnabled = (Boolean) newValue;
             Settings.Global.putInt(getContentResolver(), Settings.Global.AUTO_TIME,
                     autoEnabled ? 1 : 0);
-            mTimePref.setEnabled(!autoEnabled);
-            mDatePref.setEnabled(!autoEnabled);
-        } else if (preference.getKey().equals(KEY_AUTO_TIME_ZONE)) {
-            boolean autoZoneEnabled = (Boolean) newValue;
-            Settings.Global.putInt(
-                    getContentResolver(), Settings.Global.AUTO_TIME_ZONE, autoZoneEnabled ? 1 : 0);
-            mTimeZone.setEnabled(!autoZoneEnabled);
+			if (autoEnabled){
+				getPreferenceScreen().removePreference(mTimePref);
+				getPreferenceScreen().removePreference(mDatePref);
+			} else {
+				getPreferenceScreen().addPreference(mTimePref);
+				getPreferenceScreen().addPreference(mDatePref);
+			}
+			
+			if (!Utils.isWifiOnly(getActivity())){
+				Settings.Global.putInt(getContentResolver(), Settings.Global.AUTO_TIME_ZONE,
+                    autoEnabled ? 1 : 0);
+				mTimeZone.setEnabled(!autoEnabled);
+			}
         }
         return true;
     }
